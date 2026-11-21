@@ -107,7 +107,18 @@ function cachePrune(all){
   }
 }
 
-async function apiGet(base, path, params, ttl){
+async function apiGet(base, path, params, ttl, tries = 0){
+  try{ return await apiGetOnce(base, path, params, ttl); }
+  catch(e){
+    // ücretsiz plan dakikada ~10 istek sınırı: biraz bekleyip tekrar dene
+    if (tries < 2 && /rate|too many|limit.*minute/i.test(e.message || "")){
+      await new Promise(r => setTimeout(r, 7000));
+      return apiGet(base, path, params, ttl, tries + 1);
+    }
+    throw e;
+  }
+}
+async function apiGetOnce(base, path, params, ttl){
   const qs = new URLSearchParams(params).toString();
   const url = `${base}${path}?${qs}`;
   const ck = "c:" + url;
@@ -136,6 +147,8 @@ const api = {
   fbInjuries: id => apiGet(FB, "/injuries", {fixture:id}, 3*H),
   fbStandings: async (league, season) => { const r = await apiGet(FB, "/standings", {league, season}, 3*H); return r && r[0] ? r[0].league.standings : []; },
   fbTeamLast: id => apiGet(FB, "/fixtures", {team:id, last:10, timezone:TZ}, 6*H),
+  fbTeamSeason: (id, season) => apiGet(FB, "/fixtures", {team:id, season, timezone:TZ}, 6*H),
+  fbStats: id => apiGet(FB, "/fixtures/statistics", {fixture:id}, 30*D),
   fbFull: ids => { ids = [...new Set(ids)].sort((a,b)=>a-b).slice(0,20); return ids.length ? apiGet(FB, "/fixtures", {ids: ids.join("-")}, 30*D) : Promise.resolve([]); },
   fbSearchTeam: n => apiGet(FB, "/teams", {search:n}, 7*D),
   fbNext: async id => (await apiGet(FB, "/fixtures", {team:id, next:1, timezone:TZ}, 1800))[0],
@@ -357,15 +370,71 @@ async function viewFootball(id){
   try{ fx = await api.fbFixture(id); if (!fx) throw new ApiError("Maç bulunamadı."); }
   catch(e){ return showErr(e); }
   const lg = fx.league, hid = fx.teams.home.id, aid = fx.teams.away.id;
-  const [pred, inj, standings, hLast, aLast] = await settledAll([
-    api.fbPredictions(id), api.fbInjuries(id), api.fbStandings(lg.id, lg.season), api.fbTeamLast(hid), api.fbTeamLast(aid)]);
+  const diag = [];
+  const note = (label, p) => p.catch(e => { diag.push(`${label}: ${e.message}`); return null; });
+  const [pred, inj, standings] = await Promise.all([
+    note("Tahmin/form verisi", api.fbPredictions(id)), note("Eksikler", api.fbInjuries(id)),
+    caps.ok("st" + lg.season) ? note("Puan durumu", api.fbStandings(lg.id, lg.season).catch(e => { if (isPlanErr(e)) caps.off("st" + lg.season); throw e; })) : null]);
   let hs = null, as = null;
   try{
-    const ids = [...(hLast||[]), ...(aLast||[])].filter(x => FIN_FB.includes(x.fixture.status.short)).map(x => x.fixture.id);
-    const full = await api.fbFull(ids);
+    loading("Korner ve kart istatistikleri toplanıyor…");
+    const hList = await recentFinished(hid, lg.season, diag), aList = await recentFinished(aid, lg.season, diag);
+    let ids;
+    if (hList.length || aList.length){
+      ids = [...hList.map(x => x.fixture.id), ...aList.map(x => x.fixture.id)];
+    } else {
+      // son çare: iki takımın aralarındaki eski maçlar
+      ids = ((pred && pred.h2h) || []).filter(x => FIN_FB.includes(dig(x,"fixture","status","short"))).map(x => x.fixture.id).slice(0, 10);
+      if (ids.length) diag.push("Korner/kart: takımların son maçları alınamadı, aralarındaki eski maçlar kullanıldı.");
+    }
+    const full = await fullStats(ids, hList, aList, diag);
     hs = teamMatchStats(full, hid); as = teamMatchStats(full, aid);
-  }catch(e){}
-  app.innerHTML = renderFootball(fx, pred, inj, standings, hs, as);
+    if (!hs || !as) diag.push("Korner/kart: bu maçlar için istatistik bulunamadı.");
+  }catch(e){ diag.push("Korner/kart: " + e.message); }
+  app.innerHTML = renderFootball(fx, pred, inj, standings, hs, as) + diagCard(diag);
+}
+
+/* Ücretsiz planda reddedilen istek türlerini hatırla, tekrar denenip kota harcanmasın */
+const caps = { ok: k => store.get("cap:" + k, true) !== false, off: k => store.set("cap:" + k, false) };
+const isPlanErr = e => /plan|access|subscri|parameter/i.test(e.message || "");
+
+async function recentFinished(tid, season, diag){
+  const fin = l => (l || []).filter(x => FIN_FB.includes(x.fixture.status.short))
+    .sort((a, b) => b.fixture.date.localeCompare(a.fixture.date)).slice(0, 10);
+  if (caps.ok("last")){
+    try{ return fin(await api.fbTeamLast(tid)); }
+    catch(e){ if (isPlanErr(e)) caps.off("last"); diag.push("Son 10 maç isteği: " + e.message); }
+  }
+  for (const s of [season, season - 1]){
+    if (!caps.ok("season" + s)) continue;
+    try{ const f = fin(await api.fbTeamSeason(tid, s)); if (f.length) return f; }
+    catch(e){ if (isPlanErr(e)) caps.off("season" + s); diag.push(`Sezon ${s} maçları: ` + e.message); }
+  }
+  return [];
+}
+
+async function fullStats(ids, hList, aList, diag){
+  ids = [...new Set(ids)];
+  if (!ids.length) return [];
+  if (caps.ok("ids")){
+    try{ const r = await api.fbFull(ids); if (r.some(f => (f.statistics || []).length)) return r; }
+    catch(e){ if (isPlanErr(e)) caps.off("ids"); diag.push("Toplu maç detayı: " + e.message); }
+  }
+  // yedek yol: maç maç istatistik (kota için takım başına en fazla 4 maç)
+  const pick = hList.length || aList.length
+    ? [...new Set([...hList.slice(0, 4), ...aList.slice(0, 4)].map(x => x.fixture.id))]
+    : ids.slice(0, 6);
+  const out = [];
+  for (const fid of pick){
+    try{ const st = await api.fbStats(fid); if (st && st.length === 2) out.push({fixture: {id: fid}, statistics: st}); }
+    catch(e){ diag.push("Maç istatistiği: " + e.message); break; }
+  }
+  return out;
+}
+
+function diagCard(diag){
+  if (!diag.length) return "";
+  return `<div class="card small"><h2>ℹ️ Alınamayan veriler</h2><ul class="tips muted">${[...new Set(diag)].map(d => `<li>${esc(d)}</li>`).join("")}</ul></div>`;
 }
 
 function standingOf(st, tid){ for (const g of st||[]) for (const r of g) if (r.team.id === tid) return r; return null; }
