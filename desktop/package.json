@@ -19,7 +19,7 @@
     "productName": "Mac Analiz",
     "files": ["main.js", "web/**/*"],
     "directories": { "output": "dist" },
-    "win": { "artifactName": "MacAnaliz-${version}-${arch}-${target}.${ext}" },
+        "win": { "artifactName": "MacAnaliz-Kurulum.exe" },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
