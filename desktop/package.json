@@ -1,0 +1,31 @@
+{
+  "name": "mac-analiz",
+  "productName": "Mac Analiz",
+  "version": "1.0.0",
+  "description": "Futbol ve basketbol maç analizi",
+  "author": "Mac Analiz",
+  "main": "main.js",
+  "scripts": {
+    "copy-web": "node -e \"require('fs').rmSync('web',{recursive:true,force:true});require('fs').cpSync('../web','web',{recursive:true})\"",
+    "start": "npm run copy-web && electron .",
+    "dist": "npm run copy-web && electron-builder --win nsis portable --publish never"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.macanaliz.app",
+    "productName": "Mac Analiz",
+    "files": ["main.js", "web/**/*"],
+    "directories": { "output": "dist" },
+    "win": { "artifactName": "MacAnaliz-${version}-${arch}-${target}.${ext}" },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Maç Analiz"
+    },
+    "portable": { "artifactName": "MacAnaliz-Tasinabilir.exe" }
+  }
+}

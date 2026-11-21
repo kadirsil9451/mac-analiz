@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f6e56">
+<title>Maç Analiz</title>
+<style>
+:root{--bg:#f3f4f1;--card:#fff;--tx:#1d1d1b;--tx2:#6b6a64;--bd:#e3e2dc;--ac:#0f6e56;--acbg:#e1f5ee;--w:#3b8c22;--d:#d49a1e;--l:#d5433f;--home:#185fa5;--away:#c2541f}
+@media (prefers-color-scheme:dark){:root{--bg:#121211;--card:#1d1d1b;--tx:#efeee9;--tx2:#a3a29b;--bd:#33332f;--ac:#5dcaa5;--acbg:#08392f;--home:#6aa9ea;--away:#f0997b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+header{position:sticky;top:0;z-index:5;background:#0f6e56;color:#fff;padding:12px 16px calc(12px);padding-top:max(12px,env(safe-area-inset-top));display:flex;align-items:center;gap:10px}
+header h1{font-size:18px;font-weight:600;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header button{background:rgba(255,255,255,.15);border:0;color:#fff;font-size:18px;width:38px;height:38px;border-radius:10px;cursor:pointer}
+main{max-width:760px;margin:0 auto;padding:12px 12px 40px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.card h2{font-size:15px;margin:0 0 10px;font-weight:600}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px}
+.chip{flex:none;border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:7px 14px;border-radius:20px;font-size:14px;cursor:pointer}
+.chip.on{background:#0f6e56;color:#fff;border-color:#0f6e56}
+.lg{font-size:13px;font-weight:600;color:var(--tx2);margin:16px 4px 6px}
+.m{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:11px 14px;margin-bottom:6px;cursor:pointer}
+.m:active{transform:scale(.99)}
+.m .t{font-size:13px;color:var(--tx2);width:44px;flex:none;text-align:center}
+.m .n{flex:1;min-width:0}.m .n div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m .s{font-weight:600;font-size:15px;text-align:right}
+.live{color:var(--l);font-weight:600}
+.muted{color:var(--tx2)}.small{font-size:13px}
+.err{background:#fcebeb;color:#791f1f;border-color:#f7c1c1}
+@media (prefers-color-scheme:dark){.err{background:#3a1515;color:#f7c1c1;border-color:#791f1f}}
+.hero{text-align:center}
+.hero .teams{display:flex;align-items:center;justify-content:center;gap:12px;margin:6px 0}
+.hero .tm{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:600;font-size:15px}
+.hero img{width:48px;height:48px;object-fit:contain}
+.hero .vs{font-size:22px;font-weight:700;min-width:60px}
+.prob{display:flex;height:30px;border-radius:8px;overflow:hidden;font-size:13px;font-weight:600;color:#fff;margin:6px 0}
+.prob div{display:flex;align-items:center;justify-content:center;min-width:30px;overflow:hidden;white-space:nowrap}
+.row{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed var(--bd)}
+.row:last-child{border-bottom:0}
+.cmp{margin:9px 0}.cmp .lab{display:flex;justify-content:space-between;font-size:13px}
+.cmp .lab b{font-weight:600}
+.bars{display:flex;gap:3px;height:8px;margin-top:3px}
+.bars div{border-radius:4px}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{background:var(--acbg);color:var(--ac);padding:5px 10px;border-radius:8px;font-size:13px;font-weight:600}
+.form{display:inline-flex;gap:3px;vertical-align:middle}
+.form span{width:20px;height:20px;border-radius:5px;color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.W{background:var(--w)}.D{background:var(--d)}.L{background:var(--l)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td.muted{white-space:nowrap}
+td,th{padding:5px 4px;text-align:left;border-bottom:1px solid var(--bd)}
+th{color:var(--tx2);font-weight:600}
+input,select{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx)}
+.btn{display:inline-block;border:0;background:#0f6e56;color:#fff;font:inherit;font-weight:600;padding:10px 16px;border-radius:10px;cursor:pointer}
+.btn.sec{background:transparent;color:var(--ac);border:1px solid var(--ac)}
+.btn.sm{padding:5px 10px;font-size:13px}
+.flex{display:flex;gap:8px;align-items:center}
+.note{font-size:12px;color:var(--tx2);font-style:italic;text-align:center;margin-top:8px}
+.spin{text-align:center;padding:40px 0;color:var(--tx2)}
+.spin:before{content:"";display:block;width:32px;height:32px;margin:0 auto 12px;border:3px solid var(--bd);border-top-color:var(--ac);border-radius:50%;animation:r 0.8s linear infinite}
+@keyframes r{to{transform:rotate(360deg)}}
+ul.tips{margin:0;padding-left:18px}ul.tips li{margin:3px 0}
+.legend{display:flex;justify-content:center;gap:14px;font-size:12px;margin-bottom:4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+</style>
+</head>
+<body>
+<header>
+  <button id="back" aria-label="Geri" style="display:none">←</button>
+  <h1 id="title">⚽🏀 Maç Analiz</h1>
+  <button id="refresh" aria-label="Yenile">↻</button>
+  <button id="settings" aria-label="Ayarlar">⚙</button>
+</header>
+<main id="app"></main>
+
+<script>
+"use strict";
+/* ================== AYARLAR ================== */
+const DEFAULT_FB = {203:"Süper Lig",39:"Premier League",140:"La Liga",135:"Serie A",78:"Bundesliga",61:"Ligue 1",2:"Şampiyonlar Ligi",3:"Avrupa Ligi"};
+const DEFAULT_BB = {12:["NBA",12.5],120:["Euroleague",11.0]};
+const FB = "https://v3.football.api-sports.io", BB = "https://v1.basketball.api-sports.io";
+const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Tirane";
+
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v===null ? d : JSON.parse(v);}catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){ cachePrune(true); try{ localStorage.setItem(k, JSON.stringify(v)); }catch(_){} } },
+  del(k){ try{ localStorage.removeItem(k);}catch(e){} }
+};
+const cfg = {
+  get key(){ return store.get("apiKey",""); },
+  get fb(){ return store.get("fbLeagues", DEFAULT_FB); },
+  get bb(){ return store.get("bbLeagues", DEFAULT_BB); },
+};
+
+/* ================== API + ÖNBELLEK ================== */
+class ApiError extends Error {}
+const quota = {football:null, basketball:null};
+
+function cachePrune(all){
+  const now = Date.now();
+  for (let i = localStorage.length - 1; i >= 0; i--){
+    const k = localStorage.key(i);
+    if (!k || !k.startsWith("c:")) continue;
+    if (all) { localStorage.removeItem(k); continue; }
+    try{ if (JSON.parse(localStorage.getItem(k)).e < now) localStorage.removeItem(k); }catch(e){ localStorage.removeItem(k); }
+  }
+}
+
+async function apiGet(base, path, params, ttl){
+  const qs = new URLSearchParams(params).toString();
+  const url = `${base}${path}?${qs}`;
+  const ck = "c:" + url;
+  const hit = store.get(ck, null);
+  if (hit && hit.e > Date.now()) return hit.v;
+  if (!cfg.key) throw new ApiError("API anahtarı girilmemiş. Sağ üstteki ⚙ Ayarlar'dan gir.");
+  let r;
+  try { r = await fetch(url, {headers:{"x-apisports-key": cfg.key}}); }
+  catch(e){ throw new ApiError("Bağlantı kurulamadı. İnternetini kontrol et."); }
+  if (!r.ok) throw new ApiError("Sunucu hatası: HTTP " + r.status);
+  const rem = r.headers.get("x-ratelimit-requests-remaining");
+  if (rem !== null) quota[base === FB ? "football" : "basketball"] = rem;
+  const body = await r.json();
+  const errs = body.errors;
+  if (errs && (Array.isArray(errs) ? errs.length : Object.keys(errs).length)){
+    throw new ApiError(Array.isArray(errs) ? errs.join("; ") : Object.values(errs).join("; "));
+  }
+  store.set(ck, {e: Date.now() + ttl*1000, v: body.response});
+  return body.response;
+}
+const H = 3600, D = 86400;
+const api = {
+  fbFixturesByDate: d => apiGet(FB, "/fixtures", {date:d, timezone:TZ}, 1800),
+  fbFixture: async id => (await apiGet(FB, "/fixtures", {id, timezone:TZ}, 1800))[0],
+  fbPredictions: async id => (await apiGet(FB, "/predictions", {fixture:id}, 3*H))[0],
+  fbInjuries: id => apiGet(FB, "/injuries", {fixture:id}, 3*H),
+  fbStandings: async (league, season) => { const r = await apiGet(FB, "/standings", {league, season}, 3*H); return r && r[0] ? r[0].league.standings : []; },
+  fbTeamLast: id => apiGet(FB, "/fixtures", {team:id, last:10, timezone:TZ}, 6*H),
+  fbFull: ids => { ids = [...new Set(ids)].sort((a,b)=>a-b).slice(0,20); return ids.length ? apiGet(FB, "/fixtures", {ids: ids.join("-")}, 30*D) : Promise.resolve([]); },
+  fbSearchTeam: n => apiGet(FB, "/teams", {search:n}, 7*D),
+  fbNext: async id => (await apiGet(FB, "/fixtures", {team:id, next:1, timezone:TZ}, 1800))[0],
+  fbSearchLeague: n => apiGet(FB, "/leagues", {search:n}, 7*D),
+  bbGamesByDate: d => apiGet(BB, "/games", {date:d, timezone:TZ}, 1800),
+  bbGame: async id => (await apiGet(BB, "/games", {id, timezone:TZ}, 1800))[0],
+  bbStats: async (league, season, team) => { const r = await apiGet(BB, "/statistics", {league, season, team}, 6*H); return Array.isArray(r) ? r[0] : r; },
+  bbTeamGames: (league, season, team) => apiGet(BB, "/games", {league, season, team, timezone:TZ}, 6*H),
+  bbH2H: (a, b) => apiGet(BB, "/games", {h2h:`${a}-${b}`}, 12*H),
+};
+
+/* ================== YARDIMCILAR ================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = (x, d=0) => { const v = parseFloat(String(x ?? "").replace("%","")); return isNaN(v) ? d : v; };
+const pct = x => "%" + Math.round(x*100);
+const fx1 = x => (Math.round(x*10)/10).toFixed(1);
+const dig = (o, ...p) => p.reduce((a,k) => (a == null ? undefined : a[k]), o);
+const hhmm = iso => new Date(iso).toLocaleTimeString("tr-TR", {hour:"2-digit", minute:"2-digit"});
+const dmy = iso => new Date(iso).toLocaleString("tr-TR", {day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit"});
+const ymd = d => { const p = n => String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; };
+const FIN_FB = ["FT","AET","PEN"], FIN_BB = ["FT","AOT"], LIVE_FB = ["1H","HT","2H","ET","BT","P","LIVE","INT"];
+const formBox = s => `<span class="form">${(s||"").slice(-5).split("").map(c => `<span class="${c}">${{W:"G",D:"B",L:"M"}[c]||c}</span>`).join("")}</span>`;
+const settledAll = ps => Promise.all(ps.map(p => p.then(v => v, () => null)));
+
+/* ================== MODELLER ================== */
+function pois(k, lam){ let f = 1; for (let i=2;i<=k;i++) f*=i; return Math.exp(-lam) * Math.pow(lam,k) / f; }
+function poissonModel(lh, la, max=10){
+  let h=0,d=0,a=0,o15=0,o25=0,o35=0,btts=0,tot=0; const sc=[];
+  for (let i=0;i<=max;i++) for (let j=0;j<=max;j++){
+    const p = pois(i,lh)*pois(j,la); tot+=p; sc.push([i,j,p]);
+    if (i>j) h+=p; else if (i===j) d+=p; else a+=p;
+    if (i+j>1.5) o15+=p; if (i+j>2.5) o25+=p; if (i+j>3.5) o35+=p; if (i>0&&j>0) btts+=p;
+  }
+  sc.sort((x,y)=>y[2]-x[2]);
+  return {home:h/tot, draw:d/tot, away:a/tot, o15:o15/tot, o25:o25/tot, o35:o35/tot, btts:btts/tot, top:sc.slice(0,3)};
+}
+function poisOver(lam, line){ let s=0; for (let k=0;k<=Math.floor(line);k++) s+=pois(k,lam); return 1-s; }
+function expectedGoals(ht, at){
+  const hl = ht.league||{}, al = at.league||{};
+  const avg = (l, side, v) => num(dig(l,"goals",side,"average",v));
+  const ok = num(dig(hl,"fixtures","played","home")) >= 2 && num(dig(al,"fixtures","played","away")) >= 2;
+  const hv = ok ? "home" : "total", av = ok ? "away" : "total";
+  const sh = (avg(hl,"for",hv) + avg(al,"against",av))/2, sa = (avg(al,"for",av) + avg(hl,"against",hv))/2;
+  let lh = sh, la = sa;
+  const g = (t, s) => { const v = parseFloat(dig(t,"last_5","goals",s,"average")); return isNaN(v) ? null : v; };
+  const h5f=g(ht,"for"), h5a=g(ht,"against"), a5f=g(at,"for"), a5a=g(at,"against");
+  if ([h5f,h5a,a5f,a5a].every(v => v !== null)){ lh = .7*sh + .3*(h5f+a5a)/2; la = .7*sa + .3*(a5f+h5a)/2; }
+  if (lh<=0 && la<=0) return null;
+  return [Math.max(lh,.1), Math.max(la,.1)];
+}
+const STAT_KEYS = {"Corner Kicks":"corners","Yellow Cards":"yellow","Red Cards":"red","Total Shots":"shots","Shots on Goal":"onTarget","Ball Possession":"poss","Fouls":"fouls","expected_goals":"xg"};
+function teamMatchStats(full, tid){
+  const own={}, opp={}; let n=0, xg=false;
+  for (const f of full){
+    const b = f.statistics || [];
+    if (b.length !== 2 || !b.some(x => x.team.id === tid)) continue;
+    n++;
+    for (const blk of b){
+      const t = blk.team.id === tid ? own : opp;
+      for (const s of blk.statistics || []){
+        const k = STAT_KEYS[s.type]; if (!k) continue;
+        if (k === "xg" && s.value != null) xg = true;
+        t[k] = (t[k]||0) + num(s.value);
+      }
+    }
+  }
+  if (!n) return null;
+  for (const t of [own, opp]) for (const k in t) t[k] /= n;
+  return {n, own, opp, xg};
+}
+const sideProj = (hs, as, k) => [((hs.own[k]||0)+(as.opp[k]||0))/2, ((as.own[k]||0)+(hs.opp[k]||0))/2];
+function fbH2H(list, hid){
+  const g = (list||[]).filter(x => x.goals && x.goals.home != null && FIN_FB.includes(dig(x,"fixture","status","short")))
+    .sort((a,b) => b.fixture.date.localeCompare(a.fixture.date)).slice(0,10);
+  if (!g.length) return null;
+  let hw=0,d=0,aw=0,goals=0,btts=0,o25=0;
+  for (const x of g){ const a=x.goals.home, b=x.goals.away; goals+=a+b; btts+=(a>0&&b>0); o25+=(a+b>2);
+    if (a===b) d++; else if ((a>b) === (x.teams.home.id===hid)) hw++; else aw++; }
+  return {n:g.length, hw, d, aw, avg:goals/g.length, btts:btts/g.length, o25:o25/g.length, games:g.slice(0,5)};
+}
+function normCdf(x){ const t = 1/(1+0.2316419*Math.abs(x)); const d = 0.3989423*Math.exp(-x*x/2);
+  const p = d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274)))); return x>0 ? 1-p : p; }
+function bbModel(hs, as, sigma){
+  const avg = (s, side, v) => num(dig(s,"points",side,"average",v));
+  const ok = num(dig(hs,"games","played","home")) >= 3 && num(dig(as,"games","played","away")) >= 3;
+  const hv = ok?"home":"all", av = ok?"away":"all";
+  const eh = (avg(hs,"for",hv)+avg(as,"against",av))/2, ea = (avg(as,"for",av)+avg(hs,"against",hv))/2;
+  if (eh<=0 || ea<=0) return null;
+  const m = eh-ea, ph = normCdf(m/sigma);
+  return {eh, ea, m, tot:eh+ea, ph, pa:1-ph};
+}
+function bbForm(games, tid){
+  const g = (games||[]).filter(x => FIN_BB.includes(dig(x,"status","short")) && dig(x,"scores","home","total") != null)
+    .sort((a,b) => b.date.localeCompare(a.date)).slice(0,10);
+  if (!g.length) return null;
+  let w=0,pf=0,pa=0; const f=[];
+  for (const x of g){ const home = x.teams.home.id===tid; const me = x.scores[home?"home":"away"].total, op = x.scores[home?"away":"home"].total;
+    pf+=me; pa+=op; if (me>op){w++; f.push("W");} else f.push("L"); }
+  return {n:g.length, w, pf:pf/g.length, pa:pa/g.length, form:f.slice(0,5).reverse().join("")};
+}
+function bbH2H(list, hid){
+  const g = (list||[]).filter(x => FIN_BB.includes(dig(x,"status","short")) && dig(x,"scores","home","total") != null)
+    .sort((a,b) => b.date.localeCompare(a.date)).slice(0,10);
+  if (!g.length) return null;
+  let hw=0, tot=0;
+  for (const x of g){ const a=x.scores.home.total, b=x.scores.away.total; tot+=a+b; if ((a>b)===(x.teams.home.id===hid)) hw++; }
+  return {n:g.length, hw, aw:g.length-hw, avg:tot/g.length, games:g.slice(0,5)};
+}
+
+/* ================== GÖRSEL PARÇALAR ================== */
+const card = (title, body) => `<div class="card">${title ? `<h2>${title}</h2>` : ""}${body}</div>`;
+const row = (a, b) => `<div class="row"><span>${a}</span><span>${b}</span></div>`;
+function probBar(items){
+  return `<div class="prob">${items.filter(([, p]) => p > 0.005).map(([lab, p, col]) => `<div style="flex:${p} 1 0;background:${col}" title="${lab} ${pct(p)}">${p >= 0.16 ? `${lab} ${pct(p)}` : pct(p)}</div>`).join("")}</div>`;
+}
+function cmpRow(label, h, a, fmt = fx1){
+  if (h == null && a == null) return "";
+  const hv = h||0, av = a||0, t = hv+av || 1;
+  return `<div class="cmp"><div class="lab"><b style="color:var(--home)">${fmt(hv)}</b><span>${label}</span><b style="color:var(--away)">${fmt(av)}</b></div>
+  <div class="bars"><div style="flex:${hv/t};background:var(--home)"></div><div style="flex:${av/t};background:var(--away)"></div></div></div>`;
+}
+const legend = (hn, an) => `<div class="legend"><span><i style="background:var(--home)"></i>${esc(hn)}</span><span><i style="background:var(--away)"></i>${esc(an)}</span></div>`;
+const hero = (h, a, sub, center) => `<div class="card hero"><div class="muted small">${sub}</div>
+  <div class="teams"><div class="tm">${h.logo?`<img src="${esc(h.logo)}" alt="" onerror="this.remove()">`:""}${esc(h.name)}</div>
+  <div class="vs">${center}</div><div class="tm">${a.logo?`<img src="${esc(a.logo)}" alt="" onerror="this.remove()">`:""}${esc(a.name)}</div></div></div>`;
+
+/* ================== EKRANLAR ================== */
+const app = $("#app");
+let state = { day: 0, sport: store.get("sport","all") };
+
+function setHeader(title, back){
+  $("#title").textContent = title;
+  $("#back").style.display = back ? "" : "none";
+}
+const loading = msg => app.innerHTML = `<div class="spin">${msg||"Yükleniyor…"}</div>`;
+const showErr = e => app.innerHTML = card("", `<div class="card err" style="margin:0">⚠️ ${esc(e.message||e)}</div>`);
+
+async function viewList(){
+  setHeader("⚽🏀 Maç Analiz", false);
+  if (!cfg.key){ return viewSettings(true); }
+  const base = new Date(); base.setDate(base.getDate()+state.day);
+  const dayStr = ymd(base);
+  const days = [[-1,"Dün"],[0,"Bugün"],[1,"Yarın"],[2, new Date(Date.now()+2*D*1000).toLocaleDateString("tr-TR",{weekday:"long"})]];
+  const sports = [["all","Hepsi"],["fb","⚽ Futbol"],["bb","🏀 Basketbol"]];
+  const top = `<div class="chips">${days.map(([d,l]) => `<button class="chip ${state.day===d?"on":""}" data-day="${d}">${l}</button>`).join("")}</div>
+    <div class="chips">${sports.map(([s,l]) => `<button class="chip ${state.sport===s?"on":""}" data-sport="${s}">${l}</button>`).join("")}</div>
+    <form id="sf" class="flex" style="margin-bottom:6px"><input id="sq" placeholder="Takım ara (ör. galatasaray)" autocomplete="off"><button class="btn">Ara</button></form>`;
+  app.innerHTML = top + `<div id="list"><div class="spin">Maçlar getiriliyor…</div></div>`;
+  bindTop();
+  const parts = [];
+  const fb = cfg.fb, bb = cfg.bb;
+  const [fbRes, bbRes] = await Promise.all([
+    state.sport !== "bb" ? api.fbFixturesByDate(dayStr).catch(e => e) : null,
+    state.sport !== "fb" ? api.bbGamesByDate(dayStr).catch(e => e) : null,
+  ]);
+  if (fbRes instanceof Error) parts.push(`<div class="card err">⚽ ${esc(fbRes.message)}</div>`);
+  else if (fbRes){
+    const order = Object.keys(fb).map(Number);
+    const list = fbRes.filter(x => fb[x.league.id]).sort((a,b) => order.indexOf(a.league.id)-order.indexOf(b.league.id) || a.fixture.date.localeCompare(b.fixture.date));
+    let cur = null;
+    for (const x of list){
+      if (x.league.id !== cur){ cur = x.league.id; parts.push(`<div class="lg">⚽ ${esc(fb[cur])}</div>`); }
+      const st = x.fixture.status.short, live = LIVE_FB.includes(st), fin = FIN_FB.includes(st);
+      parts.push(`<div class="m" data-go="#/fb/${x.fixture.id}"><div class="t ${live?"live":""}">${live ? (x.fixture.status.elapsed||"")+"'" : fin ? "MS" : hhmm(x.fixture.date)}</div>
+        <div class="n"><div>${esc(x.teams.home.name)}</div><div>${esc(x.teams.away.name)}</div></div>
+        <div class="s">${x.goals.home != null ? `${x.goals.home}<br>${x.goals.away}` : ""}</div></div>`);
+    }
+    if (!list.length) parts.push(`<div class="lg">⚽ Futbol</div><div class="card muted small">Takip edilen liglerde maç yok.</div>`);
+  }
+  if (bbRes instanceof Error) parts.push(`<div class="card err">🏀 ${esc(bbRes.message)}</div>`);
+  else if (bbRes){
+    const list = bbRes.filter(x => bb[x.league.id]).sort((a,b) => a.league.id-b.league.id || a.date.localeCompare(b.date));
+    let cur = null;
+    for (const x of list){
+      if (x.league.id !== cur){ cur = x.league.id; parts.push(`<div class="lg">🏀 ${esc(bb[cur][0])}</div>`); }
+      const st = dig(x,"status","short"), fin = FIN_BB.includes(st), ns = st === "NS";
+      parts.push(`<div class="m" data-go="#/bb/${x.id}"><div class="t ${!fin&&!ns?"live":""}">${fin ? "MS" : ns ? hhmm(x.date) : esc(st)}</div>
+        <div class="n"><div>${esc(x.teams.home.name)}</div><div>${esc(x.teams.away.name)}</div></div>
+        <div class="s">${x.scores.home.total != null ? `${x.scores.home.total}<br>${x.scores.away.total}` : ""}</div></div>`);
+    }
+    if (!list.length) parts.push(`<div class="lg">🏀 Basketbol</div><div class="card muted small">Takip edilen liglerde maç yok.</div>`);
+  }
+  $("#list").innerHTML = parts.join("");
+  bindGo();
+}
+
+function bindTop(){
+  app.querySelectorAll("[data-day]").forEach(b => b.onclick = () => { state.day = +b.dataset.day; viewList(); });
+  app.querySelectorAll("[data-sport]").forEach(b => b.onclick = () => { state.sport = b.dataset.sport; store.set("sport", state.sport); viewList(); });
+  const sf = $("#sf"); if (sf) sf.onsubmit = e => { e.preventDefault(); const q = $("#sq").value.trim(); if (q.length >= 3) location.hash = "#/ara/" + encodeURIComponent(q); };
+}
+function bindGo(){ app.querySelectorAll("[data-go]").forEach(el => el.onclick = () => location.hash = el.dataset.go); }
+
+async function viewSearch(q){
+  setHeader("Takım ara", true);
+  loading("Takım aranıyor…");
+  try{
+    const teams = await api.fbSearchTeam(q);
+    if (!teams.length) return app.innerHTML = card("", `<span class="muted">“${esc(q)}” bulunamadı. İngilizce harflerle dene (ör. fenerbahce).</span>`);
+    app.innerHTML = `<div class="lg">⚽ Sonuçlar – sıradaki maçı analiz et</div>` + teams.slice(0,15).map(t =>
+      `<div class="m" data-team="${t.team.id}"><img src="${esc(t.team.logo)}" alt="" style="width:30px;height:30px;object-fit:contain" onerror="this.remove()">
+       <div class="n"><div>${esc(t.team.name)}</div><div class="muted small">${esc(t.team.country||"")}</div></div><div>›</div></div>`).join("");
+    app.querySelectorAll("[data-team]").forEach(el => el.onclick = async () => {
+      loading("Sıradaki maç bulunuyor…");
+      try{ const fx = await api.fbNext(+el.dataset.team);
+        if (!fx) return app.innerHTML = card("", "Yaklaşan maç bulunamadı.");
+        location.hash = "#/fb/" + fx.fixture.id;
+      }catch(e){ showErr(e); }
+    });
+  }catch(e){ showErr(e); }
+}
+
+/* ---------- FUTBOL ANALİZİ ---------- */
+async function viewFootball(id){
+  setHeader("Futbol analizi", true);
+  loading("Analiz hazırlanıyor… (ilk açılış 5–10 sn)");
+  let fx;
+  try{ fx = await api.fbFixture(id); if (!fx) throw new ApiError("Maç bulunamadı."); }
+  catch(e){ return showErr(e); }
+  const lg = fx.league, hid = fx.teams.home.id, aid = fx.teams.away.id;
+  const [pred, inj, standings, hLast, aLast] = await settledAll([
+    api.fbPredictions(id), api.fbInjuries(id), api.fbStandings(lg.id, lg.season), api.fbTeamLast(hid), api.fbTeamLast(aid)]);
+  let hs = null, as = null;
+  try{
+    const ids = [...(hLast||[]), ...(aLast||[])].filter(x => FIN_FB.includes(x.fixture.status.short)).map(x => x.fixture.id);
+    const full = await api.fbFull(ids);
+    hs = teamMatchStats(full, hid); as = teamMatchStats(full, aid);
+  }catch(e){}
+  app.innerHTML = renderFootball(fx, pred, inj, standings, hs, as);
+}
+
+function standingOf(st, tid){ for (const g of st||[]) for (const r of g) if (r.team.id === tid) return r; return null; }
+
+function renderFootball(fx, pred, inj, standings, hs, as){
+  const h = fx.teams.home, a = fx.teams.away, st = fx.fixture.status.short;
+  const center = fx.goals.home != null ? `${fx.goals.home} - ${fx.goals.away}` : hhmm(fx.fixture.date);
+  let out = hero(h, a, `${esc(fx.league.name)} · ${esc(fx.league.round||"")}<br>${dmy(fx.fixture.date)}${FIN_FB.includes(st)?" · Maç bitti":LIVE_FB.includes(st)?` · <span class="live">CANLI ${fx.fixture.status.elapsed||""}'</span>`:""}`, center);
+
+  const lam = pred ? expectedGoals(pred.teams.home, pred.teams.away) : null;
+  let m = null;
+  if (lam){
+    m = poissonModel(lam[0], lam[1]);
+    out += card("🧮 Model tahmini",
+      probBar([["1", m.home, "#185fa5"], ["X", m.draw, "#77766f"], ["2", m.away, "#c2541f"]]) +
+      row("Gol beklentisi", `<b>${lam[0].toFixed(2)}</b> - <b>${lam[1].toFixed(2)}</b>`) +
+      row("1.5 üst / 2.5 üst / 3.5 üst", `${pct(m.o15)} / ${pct(m.o25)} / ${pct(m.o35)}`) +
+      row("Karşılıklı gol (KG var)", pct(m.btts)) +
+      `<div style="margin-top:8px" class="small muted">En olası skorlar</div><div class="pills" style="margin-top:4px">${m.top.map(([i,j,p]) => `<span class="pill">${i}-${j} · ${pct(p)}</span>`).join("")}</div>`);
+  }
+
+  const rh = standingOf(standings, h.id), ra = standingOf(standings, a.id);
+  const ht = pred && pred.teams.home, at = pred && pred.teams.away;
+  if (rh || ra || ht){
+    const sline = r => r ? `${r.rank}. · ${r.points} p · ${r.goalsDiff>0?"+":""}${r.goalsDiff}` : "-";
+    out += card("📊 Sezon", `<table><tr><th></th><th>${esc(h.name)}</th><th>${esc(a.name)}</th></tr>
+      ${(rh||ra) ? `<tr><td>Sıra</td><td>${sline(rh)}</td><td>${sline(ra)}</td></tr>` : ""}
+      ${ht ? `<tr><td>Son 5</td><td>${formBox(dig(ht,"league","form"))}</td><td>${formBox(dig(at,"league","form"))}</td></tr>
+      <tr><td>Attığı gol*</td><td>${dig(ht,"league","goals","for","average","home") ?? "-"}</td><td>${dig(at,"league","goals","for","average","away") ?? "-"}</td></tr>
+      <tr><td>Yediği gol*</td><td>${dig(ht,"league","goals","against","average","home") ?? "-"}</td><td>${dig(at,"league","goals","against","average","away") ?? "-"}</td></tr>
+      <tr><td>Gol yemediği</td><td>${dig(ht,"league","clean_sheet","home") ?? "-"}</td><td>${dig(at,"league","clean_sheet","away") ?? "-"}</td></tr>
+      <tr><td>Gol atamadığı</td><td>${dig(ht,"league","failed_to_score","home") ?? "-"}</td><td>${dig(at,"league","failed_to_score","away") ?? "-"}</td></tr>` : ""}
+      </table>${ht ? `<div class="small muted" style="margin-top:6px">* maç başı · ev sahibi iç saha, deplasman dış saha</div>` : ""}`);
+  }
+
+  if (hs && as){
+    let b = legend(h.name, a.name) + `<div class="small muted" style="text-align:center">Son ${hs.n} / ${as.n} maç ortalaması</div>`;
+    b += cmpRow("Korner", hs.own.corners, as.own.corners) + cmpRow("Yediği korner", hs.opp.corners, as.opp.corners) +
+         cmpRow("Sarı kart", hs.own.yellow, as.own.yellow) + cmpRow("Kırmızı kart", hs.own.red, as.own.red, v => v.toFixed(2)) +
+         cmpRow("Faul", hs.own.fouls, as.own.fouls) + cmpRow("Şut", hs.own.shots, as.own.shots) +
+         cmpRow("İsabetli şut", hs.own.onTarget, as.own.onTarget) + cmpRow("Topla oynama", hs.own.poss, as.own.poss, v => "%" + Math.round(v));
+    if (hs.xg && as.xg) b += cmpRow("xG (gol beklentisi)", hs.own.xg, as.own.xg, v => v.toFixed(2)) + cmpRow("Rakibe verdiği xG", hs.opp.xg, as.opp.xg, v => v.toFixed(2));
+    out += card("📐 Detaylı istatistik", b);
+
+    const [ch, ca] = sideProj(hs, as, "corners");
+    if (ch + ca > 0){
+      const t = ch + ca;
+      out += card("🚩 Korner beklentisi",
+        row(esc(h.name), "≈" + fx1(ch)) + row(esc(a.name), "≈" + fx1(ca)) + row("<b>Toplam</b>", "<b>≈" + fx1(t) + "</b>") +
+        `<div class="pills" style="margin-top:8px">${[7.5,8.5,9.5,10.5,11.5].map(l => `<span class="pill">${l} üst · ${pct(poisOver(t,l))}</span>`).join("")}</div>`);
+    }
+    const [yh, ya] = sideProj(hs, as, "yellow"), [rdh, rda] = sideProj(hs, as, "red");
+    if (yh + ya > 0){
+      const t = yh + ya;
+      out += card("🟨 Kart beklentisi",
+        row(esc(h.name), "≈" + fx1(yh) + " sarı") + row(esc(a.name), "≈" + fx1(ya) + " sarı") + row("<b>Toplam sarı</b>", "<b>≈" + fx1(t) + "</b>") +
+        row("Kırmızı kart çıkma ihtimali", pct(1 - Math.exp(-(rdh + rda)))) +
+        `<div class="pills" style="margin-top:8px">${[2.5,3.5,4.5,5.5,6.5].map(l => `<span class="pill">${l} üst · ${pct(poisOver(t,l))}</span>`).join("")}</div>` +
+        (fx.fixture.referee ? `<div class="small muted" style="margin-top:8px">Hakem: ${esc(fx.fixture.referee)} · hakem/derbi etkisi modele dahil değil</div>` : ""));
+    }
+  }
+
+  const h2 = pred ? fbH2H(pred.h2h, h.id) : null;
+  if (h2){
+    out += card(`🤝 Aralarındaki son ${h2.n} maç`,
+      probBar([[esc(h.name.split(" ")[0]), h2.hw/h2.n, "#185fa5"], ["B", h2.d/h2.n, "#77766f"], [esc(a.name.split(" ")[0]), h2.aw/h2.n, "#c2541f"]]) +
+      row("Galibiyet", `${h2.hw} - ${h2.d} - ${h2.aw}`) + row("Maç başı gol", fx1(h2.avg)) + row("KG var / 2.5 üst", `${pct(h2.btts)} / ${pct(h2.o25)}`) +
+      `<table style="margin-top:6px">${h2.games.map(g => `<tr><td class="muted">${g.fixture.date.slice(0,10)}</td><td>${esc(g.teams.home.name)}</td><td><b>${g.goals.home}-${g.goals.away}</b></td><td>${esc(g.teams.away.name)}</td></tr>`).join("")}</table>`);
+  }
+
+  if (inj && inj.length){
+    const by = {};
+    for (const x of inj) (by[x.team.name] = by[x.team.name] || []).push(`${esc(x.player.name)} <span class="muted">(${esc(x.player.reason || x.player.type || "")})</span>`);
+    out += card("🚑 Eksikler", Object.entries(by).map(([t, ps]) => `<div style="margin-bottom:6px"><b>${esc(t)}</b><br>${ps.join(", ")}</div>`).join(""));
+  }
+
+  if (m && lam){
+    const tips = [];
+    const tot = lam[0] + lam[1];
+    if (m.home >= .55) tips.push(`${h.name} belirgin favori.`);
+    else if (m.away >= .55) tips.push(`${a.name} deplasmanda bile belirgin favori.`);
+    else if (Math.abs(m.home - m.away) < .10) tips.push("Güçler dengeli, beraberlik ihtimali göz ardı edilmemeli.");
+    else tips.push(`Hafif favori: ${m.home > m.away ? h.name : a.name}.`);
+    if (tot >= 3) tips.push(`Gollü maç beklentisi (toplam ≈${fx1(tot)}).`); else if (tot <= 2.2) tips.push(`Az gollü maç beklentisi (toplam ≈${fx1(tot)}).`);
+    if (m.btts >= .58) tips.push("İki takımın da gol bulma ihtimali yüksek."); else if (m.btts <= .42) tips.push("Takımlardan birinin gol atamama ihtimali yüksek.");
+    if (hs && as){ const [ch, ca] = sideProj(hs, as, "corners"); if (Math.abs(ch - ca) >= 1.5) tips.push(`Daha çok korner kullanması beklenen: ${ch > ca ? h.name : a.name}.`);
+      const [yh, ya] = sideProj(hs, as, "yellow"); if (yh + ya >= 5) tips.push("Kartlı bir maç beklentisi var."); }
+    out += card("📌 Yorum", `<ul class="tips">${tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul>`);
+  }
+
+  const pp = pred && pred.predictions;
+  if (pp && pp.percent){
+    out += card("🤖 API-Football tahmini", row("1 / X / 2", `${esc(pp.percent.home)} / ${esc(pp.percent.draw)} / ${esc(pp.percent.away)}`) + (pp.advice ? row("Not", esc(pp.advice)) : ""));
+  }
+  if (!pred && !hs) out += card("", `<span class="muted">Bu maç için detaylı veri bulunamadı (ücretsiz plan kısıtı veya lig kapsamı olabilir).</span>`);
+  return out + `<div class="note">İstatistiksel tahmindir, kesinlik içermez.</div>`;
+}
+
+/* ---------- BASKETBOL ANALİZİ ---------- */
+async function viewBasket(id){
+  setHeader("Basketbol analizi", true);
+  loading("Analiz hazırlanıyor…");
+  let g;
+  try{ g = await api.bbGame(id); if (!g) throw new ApiError("Maç bulunamadı."); }
+  catch(e){ return showErr(e); }
+  const lid = g.league.id, season = g.league.season, hid = g.teams.home.id, aid = g.teams.away.id;
+  const sigma = (cfg.bb[lid] || ["", 12])[1];
+  const [hs, as, hg, ag, h2] = await settledAll([api.bbStats(lid, season, hid), api.bbStats(lid, season, aid),
+    api.bbTeamGames(lid, season, hid), api.bbTeamGames(lid, season, aid), api.bbH2H(hid, aid)]);
+  app.innerHTML = renderBasket(g, hs, as, bbForm(hg, hid), bbForm(ag, aid), bbH2H(h2, hid), sigma);
+}
+
+function renderBasket(g, hs, as, hf, af, h2, sigma){
+  const h = g.teams.home, a = g.teams.away, st = dig(g,"status","short");
+  const center = g.scores.home.total != null ? `${g.scores.home.total} - ${g.scores.away.total}` : hhmm(g.date);
+  let out = hero(h, a, `${esc(g.league.name)} · ${esc(g.league.season)}<br>${dmy(g.date)}${FIN_BB.includes(st)?" · Maç bitti":""}`, center);
+  const m = hs && as ? bbModel(hs, as, sigma) : null;
+  if (m){
+    const fav = m.m > 0 ? h.name : a.name;
+    out += card("🧮 Model tahmini", probBar([[esc(h.name.split(" ").pop()), m.ph, "#185fa5"], [esc(a.name.split(" ").pop()), m.pa, "#c2541f"]]) +
+      row("Beklenen skor", `<b>${Math.round(m.eh)} - ${Math.round(m.ea)}</b>`) + row("Beklenen fark", `${esc(fav)} +${fx1(Math.abs(m.m))}`) +
+      row("Toplam sayı", "≈" + Math.round(m.tot)) +
+      `<div class="pills" style="margin-top:8px">${[-10,-5,0,5,10].map(d => { const l = Math.round(m.tot)+d+.5; return `<span class="pill">${l} üst · ${pct(1-normCdf((l-m.tot)/(sigma*1.4)))}</span>`; }).join("")}</div>`);
+  }
+  if (hs && as){
+    const rec = (s, v) => `${dig(s,"games","wins",v,"total") ?? "-"}G - ${dig(s,"games","loses",v,"total") ?? "-"}M`;
+    const av = (s, side, v) => num(dig(s,"points",side,"average",v));
+    out += card("📊 Sezon", `<table><tr><th></th><th>${esc(h.name)}</th><th>${esc(a.name)}</th></tr>
+      <tr><td>Genel</td><td>${rec(hs,"all")}</td><td>${rec(as,"all")}</td></tr>
+      <tr><td>İç / Dış</td><td>${rec(hs,"home")} (iç)</td><td>${rec(as,"away")} (dış)</td></tr></table>`) +
+      card("🎯 Sayı ortalamaları", legend(h.name, a.name) + `<div class="small muted" style="text-align:center">ev sahibi iç saha · deplasman dış saha</div>` +
+        cmpRow("Attığı sayı", av(hs,"for","home"), av(as,"for","away")) + cmpRow("Yediği sayı", av(hs,"against","home"), av(as,"against","away")));
+  }
+  if (hf || af){
+    const fl = (n, f) => f ? row(esc(n), `${formBox(f.form)} <span class="small muted">son ${f.n}: ${f.w}G · ${fx1(f.pf)}/${fx1(f.pa)}</span>`) : "";
+    out += card("🔥 Son maçlar", fl(h.name, hf) + fl(a.name, af));
+  }
+  if (h2){
+    out += card(`🤝 Aralarındaki son ${h2.n} maç`, row("Galibiyet", `${esc(h.name)} ${h2.hw} - ${h2.aw} ${esc(a.name)}`) + row("Maç başı toplam sayı", fx1(h2.avg)) +
+      `<table style="margin-top:6px">${h2.games.map(x => `<tr><td class="muted">${x.date.slice(0,10)}</td><td>${esc(x.teams.home.name)}</td><td><b>${x.scores.home.total}-${x.scores.away.total}</b></td><td>${esc(x.teams.away.name)}</td></tr>`).join("")}</table>`);
+  }
+  if (m){
+    const tips = [], fav = m.m > 0 ? h.name : a.name;
+    if (Math.abs(m.m) < 3) tips.push("Başa baş maç beklentisi."); else if (Math.abs(m.m) >= 8) tips.push(`${fav} net favori.`); else tips.push(`Hafif favori: ${fav}.`);
+    if (hf && af){ const d = hf.w/hf.n - af.w/af.n; if (Math.abs(d) >= .3) tips.push(`Son maçlarda ${d > 0 ? h.name : a.name} çok daha formda.`); }
+    if (h2 && h2.n >= 3 && Math.abs(h2.avg - m.tot) >= 8) tips.push(`Aralarındaki maçlar genelde ${h2.avg > m.tot ? "daha yüksek" : "daha düşük"} skorlu geçmiş.`);
+    out += card("📌 Yorum", `<ul class="tips">${tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul>`);
+  }
+  if (!m && !hf) out += card("", `<span class="muted">Bu maç için detaylı veri bulunamadı.</span>`);
+  return out + `<div class="note">İstatistiksel tahmindir, kesinlik içermez. Sakatlık verisi dahil değildir.</div>`;
+}
+
+/* ---------- AYARLAR ---------- */
+function viewSettings(first){
+  setHeader("Ayarlar", !first);
+  const fb = cfg.fb, bb = cfg.bb;
+  app.innerHTML =
+    (first ? card("👋 Hoş geldin", `<div class="small">Başlamak için <b>api-football.com</b> hesabındaki ücretsiz API anahtarını gir.<br>
+      <span class="muted">dashboard.api-football.com → kayıt ol → Account → My Access → API Key</span></div>`) : "") +
+    card("🔑 API anahtarı", `<form id="kf" class="flex"><input id="key" type="password" placeholder="API anahtarını yapıştır" value="${esc(cfg.key)}"><button class="btn">Kaydet</button></form>
+      <div id="kmsg" class="small muted" style="margin-top:6px">Anahtar sadece bu cihazda saklanır.</div>`) +
+    card("⚽ Futbol ligleri", Object.entries(fb).map(([id, n]) => `<div class="row"><span>${esc(n)} <span class="muted small">#${id}</span></span><button class="btn sec sm" data-delfb="${id}">Kaldır</button></div>`).join("") +
+      `<form id="lf" class="flex" style="margin-top:10px"><input id="lq" placeholder="Lig ara (ör. albania, turkey)"><button class="btn">Ara</button></form><div id="lres"></div>
+      <button class="btn sec sm" id="resetfb" style="margin-top:8px">Varsayılan liglere dön</button>`) +
+    card("🏀 Basketbol ligleri", Object.values(bb).map(([n]) => `<div class="row"><span>${esc(n)}</span></div>`).join("")) +
+    card("📶 Kota ve önbellek", row("Kalan istek (futbol)", quota.football ?? "–") + row("Kalan istek (basketbol)", quota.basketball ?? "–") +
+      `<div class="small muted" style="margin:6px 0">Ücretsiz plan: günde 100 istek. Bir futbol analizi ≈6, basketbol ≈5 istek harcar. Aynı maç tekrar açılınca önbellekten gelir.</div>
+      <button class="btn sec sm" id="clr">Önbelleği temizle</button>`);
+  $("#kf").onsubmit = async e => {
+    e.preventDefault();
+    store.set("apiKey", $("#key").value.trim());
+    $("#kmsg").textContent = "Kaydedildi, kontrol ediliyor…";
+    try{
+      const r = await fetch(FB + "/status", {headers:{"x-apisports-key": cfg.key}}); const b = await r.json();
+      const er = b.errors && (Array.isArray(b.errors) ? b.errors.join("; ") : Object.values(b.errors).join("; "));
+      if (er) $("#kmsg").innerHTML = `<span style="color:var(--l)">⚠️ ${esc(er)}</span>`;
+      else { const req = dig(b,"response","requests"); $("#kmsg").innerHTML = `✅ Anahtar çalışıyor. Bugün kullanılan: ${req ? `${req.current}/${req.limit_day}` : "?"}`;
+        if (first) setTimeout(() => { location.hash = "#/"; route(); }, 900); }
+    }catch(err){ $("#kmsg").innerHTML = `<span style="color:var(--l)">⚠️ Sunucuya ulaşılamadı: ${esc(err.message)}</span>`; }
+  };
+  app.querySelectorAll("[data-delfb]").forEach(b => b.onclick = () => { const f = cfg.fb; delete f[b.dataset.delfb]; store.set("fbLeagues", f); viewSettings(first); });
+  $("#resetfb").onclick = () => { store.del("fbLeagues"); viewSettings(first); };
+  $("#clr").onclick = () => { cachePrune(true); $("#clr").textContent = "Temizlendi ✓"; };
+  $("#lf").onsubmit = async e => {
+    e.preventDefault(); const q = $("#lq").value.trim(); if (q.length < 3) return;
+    $("#lres").innerHTML = `<div class="small muted" style="padding:8px 0">Aranıyor…</div>`;
+    try{
+      const r = await api.fbSearchLeague(q);
+      $("#lres").innerHTML = r.slice(0,12).map(x => `<div class="row"><span>${esc(x.league.name)} <span class="muted small">${esc(x.country.name)} · #${x.league.id}</span></span>
+        <button class="btn sm" data-add="${x.league.id}" data-name="${esc(x.league.name)}">Ekle</button></div>`).join("") || `<div class="small muted">Sonuç yok.</div>`;
+      $("#lres").querySelectorAll("[data-add]").forEach(b => b.onclick = () => { const f = cfg.fb; f[b.dataset.add] = b.dataset.name; store.set("fbLeagues", f); viewSettings(first); });
+    }catch(err){ $("#lres").innerHTML = `<div class="small" style="color:var(--l)">⚠️ ${esc(err.message)}</div>`; }
+  };
+}
+
+/* ================== YÖNLENDİRME ================== */
+async function route(){
+  window.scrollTo(0, 0);
+  const p = (location.hash || "#/").slice(2).split("/");
+  try{
+    if (p[0] === "fb" && p[1]) return await viewFootball(+p[1]);
+    if (p[0] === "bb" && p[1]) return await viewBasket(+p[1]);
+    if (p[0] === "ara" && p[1]) return await viewSearch(decodeURIComponent(p[1]));
+    if (p[0] === "ayar") return viewSettings(false);
+    return await viewList();
+  }catch(e){ showErr(e); }
+}
+window.addEventListener("hashchange", route);
+$("#back").onclick = () => history.length > 1 ? history.back() : (location.hash = "#/");
+$("#settings").onclick = () => location.hash = "#/ayar";
+$("#refresh").onclick = () => {
+  const p = (location.hash || "#/").slice(2).split("/");
+  if (p[0] === "" || p[0] === undefined){ const base = new Date(); base.setDate(base.getDate()+state.day); localStorage.removeItem("c:" + FB + "/fixtures?" + new URLSearchParams({date: ymd(base), timezone: TZ})); localStorage.removeItem("c:" + BB + "/games?" + new URLSearchParams({date: ymd(base), timezone: TZ})); }
+  route();
+};
+cachePrune(false);
+route();
+</script>
+</body>
+</html>
